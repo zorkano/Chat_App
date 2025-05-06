@@ -1,2 +1,218 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include "common.h"
 #include "ui.h"
+
+int columns, rows;
+
+char* Welcome[]= {
+    "__          __    _                                _",
+    "\\ \\        / /   | |                              | |",
+    " \\ \\  /\\  / /___ | |  ___  ___   _ __ ___    ___  | |_  ___",
+    "  \\ \\/  \\/ // _ \\| | / __|/ _ \\ | '_ ` _ \\  / _ \\ | __|/ _ \\",
+    "   \\  /\\  /|  __/| || (__| (_) || | | | | ||  __/ | |_| (_) |",
+    "    \\/  \\/  \\___||_| \\___|\\___/ |_| |_| |_| \\___|  \\__|\\___/",
+    "            __  __          _____  _             _",
+    "           |  \\/  |        / ____|| |           | |",
+    "           | \\  / | _   _ | |     | |__    __ _ | |_",
+    "           | |\\/| || | | || |     | '_ \\  / _` || __|",
+    "           | |  | || |_| || |____ | | | || (_| || |_",
+    "           |_|  |_| \\__, | \\_____||_| |_| \\__,_| \\__|",
+    "                     __/ |",
+    "                    |___/",
+    "\0"
+};
+
+#ifdef _WIN32
+#include <windows.h>
+
+void UI_maximizeConsole() {
+    HWND consoleWindow = GetConsoleWindow();
+    ShowWindow(consoleWindow, SW_MAXIMIZE);
+    Sleep(500);
+}
+
+void UI_clearScreen() {
+    system("cls");
+}
+
+void UI_getConsoleSize(int *columns, int *rows) {
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+    *columns = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+    *rows = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+}
+
+void UI_getCursorPosition(int *x, int *y) {
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+    *x = csbi.dwCursorPosition.X;
+    *y = csbi.dwCursorPosition.Y;
+}
+
+// Move cursor to (x, y)
+void UI_moveCursor(int x, int y) {
+    COORD coord = {(SHORT)x, (SHORT)y};
+    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
+}
+
+// Set text color (0–15 for standard Windows colors)
+void UI_setTextColor(t_COLOR colorCode) {
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), colorCode);
+}
+
+
+#else // Linux/macOS
+#include <sys/ioctl.h>
+#include <termios.h>
+#include <unistd.h>
+
+void UI_maximizeConsole() {
+    printf("\033[9;1t"); // Request maximize (xterm-compatible)
+    usleep(500000);      // Give time to resize
+}
+
+void UI_clearScreen() {
+    system("clear");
+}
+
+void UI_getConsoleSize(int *columns, int *rows) {
+    struct winsize w;
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+    *columns = w.ws_col;
+    *rows = w.ws_row;
+}
+
+void UI_getCursorPosition(int *x, int *y) {
+    struct termios saved, raw;
+    char buf[32];
+    unsigned int i = 0;
+
+    // Save current terminal settings
+    tcgetattr(STDIN_FILENO, &saved);
+    raw = saved;
+    raw.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &raw);
+
+    // Request cursor position report
+    printf("\033[6n");
+    fflush(stdout);
+
+    // Read response: ESC [ rows ; cols R
+    while (i < sizeof(buf) - 1) {
+        if (read(STDIN_FILENO, buf + i, 1) != 1) break;
+        if (buf[i] == 'R') break;
+        i++;
+    }
+    buf[i] = '\0';
+
+    // Restore terminal settings
+    tcsetattr(STDIN_FILENO, TCSANOW, &saved);
+
+    // Parse response
+    int row, col;
+    if (sscanf(buf, "\033[%d;%dR", &row, &col) == 2) {
+        *x = col - 1;
+        *y = row - 1;
+    } else {
+        *x = 0;
+        *y = 0;
+    }
+}
+
+// Move cursor to (x, y) [1-based indexing]
+void UI_moveCursor(int x, int y) {
+    printf("\033[%d;%dH", y + 1, x + 1);
+    fflush(stdout);
+}
+
+// Set text color using ANSI 30–37 codes (foreground)
+// Example: 31 = red, 32 = green, 33 = yellow, etc.
+void UI_setTextColor(t_COLOR colorCode) {
+    printf("\033[%dm", 30 + (colorCode % 8));
+    fflush(stdout);
+}
+
+#endif
+
+void UI_drawBorder(int columns, int rows) {
+    int startX, startY;
+    UI_getCursorPosition(&startX, &startY);
+    UI_setTextColor(RED);
+
+    // Top and Bottom
+    for (int x = 0; x < columns; x++) {
+        UI_moveCursor(startX + x, startY); // Top
+        if (x == 0 || x == columns - 1) printf("+");
+        else printf("-");
+
+        UI_moveCursor(startX + x, startY + rows - 1); // Bottom
+        if (x == 0 || x == columns - 1) printf("+");
+        else printf("-");
+    }
+
+    // Sides
+    for (int y = 1; y < rows - 1; y++) {
+        UI_moveCursor(startX, startY + y);
+        printf("|");
+        UI_moveCursor(startX + columns - 1, startY + y);
+        printf("|");
+    }
+
+    fflush(stdout);
+}
+
+void UI_printAscii(int x, int y, char** s) {
+    int i;
+    
+    // Set text color for ASCII art
+    UI_setTextColor(RED);
+
+    // Print each line of the ASCII art
+    for(i = 0; s[i]; i++) {
+        UI_moveCursor(x, y++);
+        printf("%s", s[i]);
+    }
+
+    UI_setTextColor(WHITE);
+}
+
+void UI_mainMenu(){
+    UI_clearScreen();
+    UI_maximizeConsole();
+    UI_getConsoleSize(&columns, &rows);
+    UI_drawBorder(columns, rows);
+    UI_printAscii(((columns - 61) / 2), 1, Welcome);
+    UI_moveCursor((columns - CHOICE_SIZE_X) / 2, (rows - CHOICE_SIZE_Y) / 2);
+    UI_drawBorder(CHOICE_SIZE_X, CHOICE_SIZE_Y);
+    UI_moveCursor(((columns - CHOICE_SIZE_X) / 2) + ((CHOICE_SIZE_X - 8) / 2) + 1, ((rows - CHOICE_SIZE_Y) / 2) + 2);
+    printf("Server");
+    UI_moveCursor((columns - CHOICE_SIZE_X) / 2, (rows + CHOICE_SIZE_Y) / 2);
+    UI_drawBorder(CHOICE_SIZE_X, CHOICE_SIZE_Y);
+    UI_moveCursor(((columns - CHOICE_SIZE_X) / 2) + ((CHOICE_SIZE_X - 8) / 2) + 1, ((rows + CHOICE_SIZE_Y) / 2) + 2);
+    printf("Client");
+}
+
+void UI_serverMenu(){
+    UI_clearScreen();
+    UI_maximizeConsole();
+    UI_getConsoleSize(&columns, &rows);
+    UI_drawBorder(columns, rows);
+
+}   
+
+void UI_clientMenu(){
+    UI_clearScreen();
+    UI_maximizeConsole();
+    UI_getConsoleSize(&columns, &rows);
+    UI_drawBorder(columns, rows);
+
+}
+
+void UI_chatMenu(){
+    UI_clearScreen();
+    UI_maximizeConsole();
+    UI_getConsoleSize(&columns, &rows);
+    UI_drawBorder(columns, rows);
+
+}
