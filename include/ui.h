@@ -30,13 +30,22 @@ typedef enum{
 #define CHOICE_SIZE_X 30
 #define CHOICE_SIZE_Y 5
 
-void UI_mainMenu();
 
-void UI_serverMenu();
 
-void UI_clientMenu();
+typedef enum PROGRAM_STATE{
+    MAIN_MENU = 0,
+    SERVER_MENU,
+    CLIENT_MENU,
+    CHAT_MENU,
+}PROGRAM_STATE_t;
 
-void UI_chatMenu();
+void UI_mainMenu(PROGRAM_STATE_t* programState);
+
+void UI_serverMenu(PROGRAM_STATE_t* programState);
+
+void UI_clientMenu(PROGRAM_STATE_t* programState);
+
+void UI_chatMenu(PROGRAM_STATE_t* programState);
 
 
 
