@@ -61,6 +61,10 @@ void UI_setTextColor(t_COLOR colorCode) {
     SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), colorCode);
 }
 
+// Set background color (0–15 for standard Windows colors)
+void UI_setBackgroundColor(t_COLOR colorCode) {
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), (colorCode << 4));
+}
 
 #else // Linux/macOS
 #include <sys/ioctl.h>
@@ -133,6 +137,11 @@ void UI_setTextColor(t_COLOR colorCode) {
     fflush(stdout);
 }
 
+void UI_setBackgroundColor(t_COLOR colorCode) {
+    printf("\033[%dm", 40 + (colorCode % 8));
+    fflush(stdout);
+}
+
 #endif
 
 void UI_drawBorder(int columns, int rows) {
@@ -177,20 +186,118 @@ void UI_printAscii(int x, int y, char** s) {
     UI_setTextColor(WHITE);
 }
 
+void UI_choiceNavigation(int x, int y, CHOICE_STATE_t state) {
+    int i, j;
+    // Set highlight color
+    if(state){
+        UI_setBackgroundColor(WHITE);    
+    }else{
+        UI_setBackgroundColor(BLACK);    
+    }
+
+    // Draw highlight block
+    for (i = 0; i < CHOICE_SIZE_Y - 2; i++) {
+        for (j = 0; j < CHOICE_SIZE_X - 2; j++) {
+            UI_moveCursor(x + j + 1, y + i + 1);
+            printf(" "); // Fill with solid blocks
+        }
+    }
+
+}
+
 void UI_mainMenu(){
+    int CurrentChoice = SERVER;
+
+    HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
+
     UI_clearScreen();
     UI_maximizeConsole();
     UI_getConsoleSize(&columns, &rows);
+    
+    int ChoiceBorderPivotX = (columns - CHOICE_SIZE_X) / 2;
+    int ServerBorderPivotY = (rows - CHOICE_SIZE_Y) / 2;
+    int ClientBorderPivotY = (rows + CHOICE_SIZE_Y) / 2;
+
+    int ChoiceTextPivotX = (ChoiceBorderPivotX) + ((CHOICE_SIZE_X - 8) / 2) + 1;
+    int ServerTextPivotY = ServerBorderPivotY + 2;
+    int ClientTextPivotY = ClientBorderPivotY + 2;
+    
+    //Draw the borders of the application 
     UI_drawBorder(columns, rows);
+    //Draw the welcome message
     UI_printAscii(((columns - 61) / 2), 1, Welcome);
-    UI_moveCursor((columns - CHOICE_SIZE_X) / 2, (rows - CHOICE_SIZE_Y) / 2);
+    //draw the borders of the first choice
+    UI_moveCursor(ChoiceBorderPivotX, ServerBorderPivotY);
     UI_drawBorder(CHOICE_SIZE_X, CHOICE_SIZE_Y);
-    UI_moveCursor(((columns - CHOICE_SIZE_X) / 2) + ((CHOICE_SIZE_X - 8) / 2) + 1, ((rows - CHOICE_SIZE_Y) / 2) + 2);
+    UI_moveCursor(ChoiceTextPivotX, ServerTextPivotY);
     printf("Server");
-    UI_moveCursor((columns - CHOICE_SIZE_X) / 2, (rows + CHOICE_SIZE_Y) / 2);
+    //draw the borders of the second choice
+    UI_moveCursor(ChoiceBorderPivotX, ClientBorderPivotY);
     UI_drawBorder(CHOICE_SIZE_X, CHOICE_SIZE_Y);
-    UI_moveCursor(((columns - CHOICE_SIZE_X) / 2) + ((CHOICE_SIZE_X - 8) / 2) + 1, ((rows + CHOICE_SIZE_Y) / 2) + 2);
+    UI_moveCursor(ChoiceTextPivotX, ClientTextPivotY);
     printf("Client");
+
+    while(1){
+        // Create an event record structure
+        INPUT_RECORD inputRecord;
+        DWORD eventsRead;
+
+        // Read the key press event
+        ReadConsoleInput(hInput, &inputRecord, 1, &eventsRead);
+        
+        UI_moveCursor(1,1);
+        // Check if the event is a key press
+        if(inputRecord.EventType == KEY_EVENT){
+            WORD virtualKeyCode = inputRecord.Event.KeyEvent.wVirtualKeyCode;
+
+            // Check for arrow keys
+            if(VK_UP == virtualKeyCode && inputRecord.Event.KeyEvent.bKeyDown) {
+                if(SERVER == CurrentChoice){
+                    UI_choiceNavigation(ChoiceBorderPivotX, ClientBorderPivotY, SET);
+                    UI_moveCursor(ChoiceTextPivotX + 1, ClientTextPivotY);
+                    printf("Client");
+                    UI_choiceNavigation(ChoiceBorderPivotX, ServerBorderPivotY, CLEAR);
+                    UI_moveCursor(ChoiceTextPivotX, ServerTextPivotY);
+                    UI_setTextColor(RED);
+                    printf("Server");
+                    CurrentChoice = CLIENT;
+                }else if(CLIENT == CurrentChoice){
+                    UI_choiceNavigation(ChoiceBorderPivotX, ClientBorderPivotY, CLEAR);
+                    UI_moveCursor(ChoiceTextPivotX, ClientTextPivotY);
+                    UI_setTextColor(RED);
+                    printf("Client");
+                    UI_choiceNavigation(ChoiceBorderPivotX, ServerBorderPivotY, SET);
+                    UI_moveCursor(ChoiceTextPivotX + 1, ServerTextPivotY);
+                    printf("Server");
+                    CurrentChoice = SERVER;
+                }
+            }else if(VK_DOWN == virtualKeyCode && inputRecord.Event.KeyEvent.bKeyDown) {
+                if(SERVER == CurrentChoice){
+                    UI_choiceNavigation(ChoiceBorderPivotX, ClientBorderPivotY, SET);
+                    UI_moveCursor(ChoiceTextPivotX + 1, ClientTextPivotY);
+                    printf("Client");
+                    UI_choiceNavigation(ChoiceBorderPivotX, ServerBorderPivotY, CLEAR);
+                    UI_moveCursor(ChoiceTextPivotX, ServerTextPivotY);
+                    UI_setTextColor(RED);
+                    printf("Server");
+                    CurrentChoice = CLIENT;
+                }else if(CLIENT == CurrentChoice){
+                    UI_choiceNavigation(ChoiceBorderPivotX, ClientBorderPivotY, CLEAR);
+                    UI_moveCursor(ChoiceTextPivotX, ClientTextPivotY);
+                    UI_setTextColor(RED);
+                    printf("Client");
+                    UI_choiceNavigation(ChoiceBorderPivotX, ServerBorderPivotY, SET);
+                    UI_moveCursor(ChoiceTextPivotX + 1, ServerTextPivotY);
+                    printf("Server");
+                    CurrentChoice = SERVER;                    
+                }
+            }else if(VK_RETURN == virtualKeyCode && inputRecord.Event.KeyEvent.bKeyDown){
+                //should return state of the next menu
+                break;
+            }
+        }
+    }
+
 }
 
 void UI_serverMenu(){
