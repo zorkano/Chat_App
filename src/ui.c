@@ -77,6 +77,10 @@ void UI_setTextColor(t_COLOR colorCode) {
 void UI_setBackgroundColor(t_COLOR colorCode) {
     SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), (colorCode << 4));
 }
+// Set background color (0–15 for standard Windows colors)
+void UI_setBackgroundColor(t_COLOR colorCode) {
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), (colorCode << 4));
+}
 
 #else // Linux/macOS
 #include <sys/ioctl.h>
@@ -154,6 +158,11 @@ void UI_setBackgroundColor(t_COLOR colorCode) {
     fflush(stdout);
 }
 
+void UI_setBackgroundColor(t_COLOR colorCode) {
+    printf("\033[%dm", 40 + (colorCode % 8));
+    fflush(stdout);
+}
+
 #endif
 
 void UI_drawBorder(int columns, int rows) {
@@ -217,6 +226,25 @@ void UI_choiceNavigation(int x, int y, CHOICE_STATE_t state) {
 
 }
 
+void UI_choiceNavigation(int x, int y, CHOICE_STATE_t state) {
+    int i, j;
+    // Set highlight color
+    if(state){
+        UI_setBackgroundColor(WHITE);    
+    }else{
+        UI_setBackgroundColor(BLACK);    
+    }
+
+    // Draw highlight block
+    for (i = 0; i < CHOICE_SIZE_Y - 2; i++) {
+        for (j = 0; j < CHOICE_SIZE_X - 2; j++) {
+            UI_moveCursor(x + j + 1, y + i + 1);
+            printf(" "); // Fill with solid blocks
+        }
+    }
+
+}
+
 void UI_mainMenu(PROGRAM_STATE_t* programState){
     *programState = SERVER_MENU;
 
@@ -235,9 +263,22 @@ void UI_mainMenu(PROGRAM_STATE_t* programState){
     int ClientTextPivotY = ClientBorderPivotY + 2;
     
     //Draw the borders of the application 
+    
+    int ChoiceBorderPivotX = (columns - CHOICE_SIZE_X) / 2;
+    int ServerBorderPivotY = (rows - CHOICE_SIZE_Y) / 2;
+    int ClientBorderPivotY = (rows + CHOICE_SIZE_Y) / 2;
+
+    int ChoiceTextPivotX = (ChoiceBorderPivotX) + ((CHOICE_SIZE_X - 8) / 2) + 1;
+    int ServerTextPivotY = ServerBorderPivotY + 2;
+    int ClientTextPivotY = ClientBorderPivotY + 2;
+    
+    //Draw the borders of the application 
     UI_drawBorder(columns, rows);
     //Draw the welcome message
+    //Draw the welcome message
     UI_printAscii(((columns - 61) / 2), 1, Welcome);
+    //draw the borders of the first choice
+    UI_moveCursor(ChoiceBorderPivotX, ServerBorderPivotY);
     //draw the borders of the first choice
     UI_moveCursor(ChoiceBorderPivotX, ServerBorderPivotY);
     UI_drawBorder(CHOICE_SIZE_X, CHOICE_SIZE_Y);
@@ -246,7 +287,10 @@ void UI_mainMenu(PROGRAM_STATE_t* programState){
     printf("Server");
     //draw the borders of the second choice
     UI_moveCursor(ChoiceBorderPivotX, ClientBorderPivotY);
+    //draw the borders of the second choice
+    UI_moveCursor(ChoiceBorderPivotX, ClientBorderPivotY);
     UI_drawBorder(CHOICE_SIZE_X, CHOICE_SIZE_Y);
+    UI_moveCursor(ChoiceTextPivotX, ClientTextPivotY);
     UI_moveCursor(ChoiceTextPivotX, ClientTextPivotY);
     printf("Client");
 
