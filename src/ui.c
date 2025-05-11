@@ -88,6 +88,8 @@ void UI_maximizeConsole() {
 
 void UI_clearScreen() {
     system("cls");
+    UI_setBackgroundColor(BLACK);
+    UI_setTextColor(RED);
 }
 
 void UI_getConsoleSize(int *columns, int *rows) {
@@ -147,6 +149,8 @@ void UI_maximizeConsole() {
 
 void UI_clearScreen() {
     system("clear");
+    UI_setBackgroundColor(BLACK);
+    UI_setTextColor(RED);
 }
 
 void UI_getConsoleSize(int *columns, int *rows) {
