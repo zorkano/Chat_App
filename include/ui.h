@@ -11,7 +11,7 @@ typedef enum{
     PURPLE,
     YELLOW,
     WHITE,
-} t_COLOR;
+} COLOR_t;
 
 #else
 typedef enum{
@@ -23,14 +23,12 @@ typedef enum{
     PURPLE,
     CYAN,
     WHITE,
-}t_COLOR;
+}COLOR_t;
 
 #endif
 
 #define CHOICE_SIZE_X 30
 #define CHOICE_SIZE_Y 5
-
-
 
 typedef enum PROGRAM_STATE{
     MAIN_MENU = 0,

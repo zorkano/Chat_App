@@ -15,7 +15,31 @@ typedef enum CHOICE_STATE{
 
 int columns, rows;
 
-char* Welcome[]= {
+char clientUsername[15] = {
+    "\0"
+};
+
+char clientIpAddress[17] = {
+    "\0"
+};
+
+char clientPort[10] = {
+    "\0"
+};
+
+char serverUsername[15] = {
+    "\0"
+};
+
+char serverIpAddress[17] = {
+    "\0"
+};
+
+char serverPort[10] = {
+    "\0"
+};
+
+char* Welcome[] = {
     "__          __    _                                _",
     "\\ \\        / /   | |                              | |",
     " \\ \\  /\\  / /___ | |  ___  ___   _ __ ___    ___  | |_  ___",
@@ -33,7 +57,25 @@ char* Welcome[]= {
     "\0"
 };
 
+char* Server[] = {   
+"  _____  ______  _____ __      __ ______  _____",
+" / ____||  ____||  __ \\\\ \\    / /|  ____||  __ \\",
+"| (___  | |__   | |__) |\\ \\  / / | |__   | |__) |",
+" \\___ \\ |  __|  |  _  /  \\ \\/ /  |  __|  |  _  /",
+" ____) || |____ | | \\ \\   \\  /   | |____ | | \\ \\",
+"|_____/ |______||_|  \\_\\   \\/    |______||_|  \\_\\",
+"\0"
+};
 
+char* Client[] = {
+"  _____  _       _____  ______  _   _  _______ ",
+" / ____|| |     |_   _||  ____|| \\ | ||__   __|",
+"| |     | |       | |  | |__   |  \\| |   | |",
+"| |     | |       | |  |  __|  | . ` |   | |",
+"| |____ | |____  _| |_ | |____ | |\\  |   | |",
+" \\_____||______||_____||______||_| \\_|   |_|",
+"\0"
+};
 
 #ifdef _WIN32
 #include <windows.h>
@@ -69,18 +111,29 @@ void UI_moveCursor(int x, int y) {
 }
 
 // Set text color (0–15 for standard Windows colors)
-void UI_setTextColor(t_COLOR colorCode) {
-    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), colorCode);
+void UI_setTextColor(COLOR_t colorCode) {
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    GetConsoleScreenBufferInfo(hConsole, &csbi);
+
+    // Mask out the background, preserve it
+    WORD current = csbi.wAttributes;
+    WORD newAttr = (current & 0xF0) | (colorCode & 0x0F);
+    SetConsoleTextAttribute(hConsole, newAttr);
 }
 
 // Set background color (0–15 for standard Windows colors)
-void UI_setBackgroundColor(t_COLOR colorCode) {
-    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), (colorCode << 4));
+void UI_setBackgroundColor(COLOR_t colorCode) {
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    GetConsoleScreenBufferInfo(hConsole, &csbi);
+
+    // Mask out the foreground, preserve it
+    WORD current = csbi.wAttributes;
+    WORD newAttr = (current & 0x0F) | ((colorCode & 0x0F) << 4);
+    SetConsoleTextAttribute(hConsole, newAttr);
 }
-// Set background color (0–15 for standard Windows colors)
-void UI_setBackgroundColor(t_COLOR colorCode) {
-    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), (colorCode << 4));
-}
+
 
 #else // Linux/macOS
 #include <sys/ioctl.h>
@@ -146,28 +199,26 @@ void UI_moveCursor(int x, int y) {
     fflush(stdout);
 }
 
-// Set text color using ANSI 30–37 codes (foreground)
-// Example: 31 = red, 32 = green, 33 = yellow, etc.
-void UI_setTextColor(t_COLOR colorCode) {
+// Set text color (0–7 for standard ANSI colors)
+void UI_setTextColor(COLOR_t colorCode) {
     printf("\033[%dm", 30 + (colorCode % 8));
     fflush(stdout);
 }
 
-void UI_setBackgroundColor(t_COLOR colorCode) {
+// Set background color (0–7 for standard ANSI colors)
+void UI_setBackgroundColor(COLOR_t colorCode) {
     printf("\033[%dm", 40 + (colorCode % 8));
     fflush(stdout);
 }
 
-void UI_setBackgroundColor(t_COLOR colorCode) {
-    printf("\033[%dm", 40 + (colorCode % 8));
-    fflush(stdout);
-}
+
 
 #endif
 
 void UI_drawBorder(int columns, int rows) {
     int startX, startY;
     UI_getCursorPosition(&startX, &startY);
+    UI_setBackgroundColor(BLACK);
     UI_setTextColor(RED);
 
     // Top and Bottom
@@ -203,8 +254,12 @@ void UI_printAscii(int x, int y, char** s) {
         UI_moveCursor(x, y++);
         printf("%s", s[i]);
     }
+}
 
-    UI_setTextColor(WHITE);
+void UI_printString(char* string, COLOR_t textColor, COLOR_t backgroundColor){
+    UI_setBackgroundColor(backgroundColor);
+    UI_setTextColor(textColor);
+    printf("%s", string);
 }
 
 void UI_choiceNavigation(int x, int y, CHOICE_STATE_t state) {
@@ -213,26 +268,7 @@ void UI_choiceNavigation(int x, int y, CHOICE_STATE_t state) {
     if(state){
         UI_setBackgroundColor(WHITE);    
     }else{
-        UI_setBackgroundColor(BLACK);    
-    }
-
-    // Draw highlight block
-    for (i = 0; i < CHOICE_SIZE_Y - 2; i++) {
-        for (j = 0; j < CHOICE_SIZE_X - 2; j++) {
-            UI_moveCursor(x + j + 1, y + i + 1);
-            printf(" "); // Fill with solid blocks
-        }
-    }
-
-}
-
-void UI_choiceNavigation(int x, int y, CHOICE_STATE_t state) {
-    int i, j;
-    // Set highlight color
-    if(state){
-        UI_setBackgroundColor(WHITE);    
-    }else{
-        UI_setBackgroundColor(BLACK);    
+        UI_setBackgroundColor(BLACK);
     }
 
     // Draw highlight block
@@ -254,15 +290,6 @@ void UI_mainMenu(PROGRAM_STATE_t* programState){
     UI_maximizeConsole();
     UI_getConsoleSize(&columns, &rows);
     
-    int ChoiceBorderPivotX = (columns - CHOICE_SIZE_X) / 2;
-    int ServerBorderPivotY = (rows - CHOICE_SIZE_Y) / 2;
-    int ClientBorderPivotY = (rows + CHOICE_SIZE_Y) / 2;
-
-    int ChoiceTextPivotX = (ChoiceBorderPivotX) + ((CHOICE_SIZE_X - 8) / 2) + 1;
-    int ServerTextPivotY = ServerBorderPivotY + 2;
-    int ClientTextPivotY = ClientBorderPivotY + 2;
-    
-    //Draw the borders of the application 
     
     int ChoiceBorderPivotX = (columns - CHOICE_SIZE_X) / 2;
     int ServerBorderPivotY = (rows - CHOICE_SIZE_Y) / 2;
@@ -274,25 +301,22 @@ void UI_mainMenu(PROGRAM_STATE_t* programState){
     
     //Draw the borders of the application 
     UI_drawBorder(columns, rows);
-    //Draw the welcome message
+
     //Draw the welcome message
     UI_printAscii(((columns - 61) / 2), 1, Welcome);
-    //draw the borders of the first choice
-    UI_moveCursor(ChoiceBorderPivotX, ServerBorderPivotY);
+
     //draw the borders of the first choice
     UI_moveCursor(ChoiceBorderPivotX, ServerBorderPivotY);
     UI_drawBorder(CHOICE_SIZE_X, CHOICE_SIZE_Y);
     UI_choiceNavigation(ChoiceBorderPivotX, ServerBorderPivotY, SET);
     UI_moveCursor(ChoiceTextPivotX + 1, ServerTextPivotY);
-    printf("Server");
-    //draw the borders of the second choice
-    UI_moveCursor(ChoiceBorderPivotX, ClientBorderPivotY);
+    UI_printString("Server", RED, WHITE);
+
     //draw the borders of the second choice
     UI_moveCursor(ChoiceBorderPivotX, ClientBorderPivotY);
     UI_drawBorder(CHOICE_SIZE_X, CHOICE_SIZE_Y);
     UI_moveCursor(ChoiceTextPivotX, ClientTextPivotY);
-    UI_moveCursor(ChoiceTextPivotX, ClientTextPivotY);
-    printf("Client");
+    UI_printString("Client", RED, BLACK);
 
     while(1){
         // Create an event record structure
@@ -312,43 +336,45 @@ void UI_mainMenu(PROGRAM_STATE_t* programState){
                 if(SERVER_MENU == *programState){
                     UI_choiceNavigation(ChoiceBorderPivotX, ClientBorderPivotY, SET);
                     UI_moveCursor(ChoiceTextPivotX + 1, ClientTextPivotY);
-                    printf("Client");
+                    UI_printString("Client", RED, WHITE);
                     UI_choiceNavigation(ChoiceBorderPivotX, ServerBorderPivotY, CLEAR);
                     UI_moveCursor(ChoiceTextPivotX, ServerTextPivotY);
                     UI_setTextColor(RED);
-                    printf("Server");
+                    UI_printString("Server", RED, BLACK);
                     *programState = CLIENT_MENU;
                 }else if(CLIENT_MENU == *programState){
                     UI_choiceNavigation(ChoiceBorderPivotX, ClientBorderPivotY, CLEAR);
                     UI_moveCursor(ChoiceTextPivotX, ClientTextPivotY);
                     UI_setTextColor(RED);
-                    printf("Client");
+                    UI_printString("Client", RED, BLACK);
                     UI_choiceNavigation(ChoiceBorderPivotX, ServerBorderPivotY, SET);
                     UI_moveCursor(ChoiceTextPivotX + 1, ServerTextPivotY);
-                    printf("Server");
+                    UI_printString("Server", RED, WHITE);
                     *programState = SERVER_MENU;
                 }
             }else if(VK_DOWN == virtualKeyCode && inputRecord.Event.KeyEvent.bKeyDown) {
                 if(SERVER_MENU == *programState){
                     UI_choiceNavigation(ChoiceBorderPivotX, ClientBorderPivotY, SET);
                     UI_moveCursor(ChoiceTextPivotX + 1, ClientTextPivotY);
-                    printf("Client");
+                    UI_printString("Client", RED, WHITE);
                     UI_choiceNavigation(ChoiceBorderPivotX, ServerBorderPivotY, CLEAR);
                     UI_moveCursor(ChoiceTextPivotX, ServerTextPivotY);
                     UI_setTextColor(RED);
-                    printf("Server");
+                    UI_printString("Server", RED, BLACK);
                     *programState = CLIENT_MENU;
                 }else if(CLIENT_MENU == *programState){
                     UI_choiceNavigation(ChoiceBorderPivotX, ClientBorderPivotY, CLEAR);
                     UI_moveCursor(ChoiceTextPivotX, ClientTextPivotY);
                     UI_setTextColor(RED);
-                    printf("Client");
+                    UI_printString("Client", RED, BLACK);
                     UI_choiceNavigation(ChoiceBorderPivotX, ServerBorderPivotY, SET);
                     UI_moveCursor(ChoiceTextPivotX + 1, ServerTextPivotY);
-                    printf("Server");
+                    UI_printString("Server", RED, WHITE);
                     *programState = SERVER_MENU;                    
                 }
             }else if(VK_RETURN == virtualKeyCode && inputRecord.Event.KeyEvent.bKeyDown){
+                UI_setTextColor(RED);
+                UI_setBackgroundColor(BLACK);
                 break;
             }
         }
@@ -356,26 +382,106 @@ void UI_mainMenu(PROGRAM_STATE_t* programState){
 
 }
 
-void UI_serverMenu(PROGRAM_STATE_t* programState){
+void UI_serverMenu(PROGRAM_STATE_t* programState){    
     UI_clearScreen();
     UI_maximizeConsole();
     UI_getConsoleSize(&columns, &rows);
     UI_drawBorder(columns, rows);
+    UI_printAscii(((columns - 50) / 2), 1, Server);
+    
+    int inputBorderPivotX = (columns - 50) / 2;
+    int inputBorderPivotY = (rows - CHOICE_SIZE_Y) / 2;
 
-}   
+    UI_moveCursor(inputBorderPivotX, inputBorderPivotY);
+    UI_drawBorder(50, 7);
+
+        // Write text to expect input
+    UI_moveCursor(inputBorderPivotX + 2, inputBorderPivotY + 1);
+    UI_printString("Username: ", RED, BLACK);
+    UI_printString("                ", BLACK, WHITE);
+
+    UI_moveCursor(inputBorderPivotX + 2, inputBorderPivotY + 3);
+    UI_printString("IP address: ", RED, BLACK);
+    UI_printString("                ", BLACK, WHITE);
+
+    UI_moveCursor(inputBorderPivotX + 2, inputBorderPivotY + 5);
+    UI_printString("Port: ", RED, BLACK);
+    UI_printString("                ", BLACK, WHITE);
+
+    UI_moveCursor(inputBorderPivotX + 12, inputBorderPivotY + 1);
+    scanf("%s", serverUsername);
+
+    // Get a free port and the device ip address and print them inplace of placeholders
+    UI_moveCursor(inputBorderPivotX + 14, inputBorderPivotY + 3);
+    UI_printString("255.255.255.255", BLACK, WHITE);
+    UI_moveCursor(inputBorderPivotX + 8, inputBorderPivotY + 5);
+    UI_printString("8080", BLACK, WHITE);
+    
+    // Wait for connection from client
+    if(1){
+        *programState = CHAT_MENU;
+    }else{
+       *programState = SERVER_MENU; 
+    }
+}
 
 void UI_clientMenu(PROGRAM_STATE_t* programState){
     UI_clearScreen();
     UI_maximizeConsole();
     UI_getConsoleSize(&columns, &rows);
     UI_drawBorder(columns, rows);
+    UI_printAscii(((columns - 50) / 2), 1, Client);
+    
+    int inputBorderPivotX = (columns - 50) / 2;
+    int inputBorderPivotY = (rows - CHOICE_SIZE_Y) / 2;
 
+    UI_moveCursor(inputBorderPivotX, inputBorderPivotY);
+    UI_drawBorder(50, 7);
+
+    UI_moveCursor(inputBorderPivotX + 2, inputBorderPivotY + 1);
+    UI_printString("Username: ", RED, BLACK);
+    UI_printString("                ", BLACK, WHITE);
+
+    UI_moveCursor(inputBorderPivotX + 2, inputBorderPivotY + 3);
+    UI_printString("IP address: ", RED, BLACK);
+    UI_printString("                ", BLACK, WHITE);
+
+    UI_moveCursor(inputBorderPivotX + 2, inputBorderPivotY + 5);
+    UI_printString("Port: ", RED, BLACK);
+    UI_printString("                ", BLACK, WHITE);
+    
+    UI_moveCursor(inputBorderPivotX + 12, inputBorderPivotY + 1);
+    scanf("%s", clientUsername);
+    UI_moveCursor(inputBorderPivotX + 14, inputBorderPivotY + 3);
+    scanf("%s", clientIpAddress);
+    UI_moveCursor(inputBorderPivotX + 8, inputBorderPivotY + 5);
+    scanf("%s", clientPort);
+
+    // try to connect to the server
+    if(1){
+        *programState = CHAT_MENU;
+    }else{
+       *programState = CLIENT_MENU;
+    }
 }
 
 void UI_chatMenu(PROGRAM_STATE_t* programState){
     UI_clearScreen();
     UI_maximizeConsole();
     UI_getConsoleSize(&columns, &rows);
+    int cursorChatPostitionX = 1;
+    int cursorChatPostitionY = 1;
+
     UI_drawBorder(columns, rows);
 
+    UI_moveCursor(0, rows - 3);
+    UI_drawBorder(columns, 3);
+
+    UI_moveCursor(1, rows - 2);
+    printf("You are now talking as ");
+    UI_printString("Zorkano: ", YELLOW, BLACK);
+
+    // while loop for the chat
+    while(1){
+    };
 }
