@@ -1,8 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "common.h"
+#include "server.h"
+#include "client.h"
 #include "ui.h"
 
+
+extern socket_t sockfd;
+
+struct sockaddr_in out_client_addr;
 typedef enum CHOICE{
     SERVER = 0,
     CLIENT,
@@ -23,9 +29,7 @@ char clientIpAddress[17] = {
     "\0"
 };
 
-char clientPort[10] = {
-    "\0"
-};
+int clientPort;
 
 char serverUsername[15] = {
     "\0"
@@ -38,6 +42,8 @@ char serverIpAddress[17] = {
 char serverPort[10] = {
     "\0"
 };
+
+int port;
 
 char* Welcome[] = {
     "__          __    _                                _",
@@ -80,38 +86,6 @@ char* Client[] = {
 #ifdef _WIN32
 #include <windows.h>
 
-void UI_maximizeConsole() {
-    HWND consoleWindow = GetConsoleWindow();
-    ShowWindow(consoleWindow, SW_MAXIMIZE);
-    Sleep(500);
-}
-
-void UI_clearScreen() {
-    system("cls");
-    UI_setBackgroundColor(BLACK);
-    UI_setTextColor(RED);
-}
-
-void UI_getConsoleSize(int *columns, int *rows) {
-    CONSOLE_SCREEN_BUFFER_INFO csbi;
-    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
-    *columns = csbi.srWindow.Right - csbi.srWindow.Left + 1;
-    *rows = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
-}
-
-void UI_getCursorPosition(int *x, int *y) {
-    CONSOLE_SCREEN_BUFFER_INFO csbi;
-    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
-    *x = csbi.dwCursorPosition.X;
-    *y = csbi.dwCursorPosition.Y;
-}
-
-// Move cursor to (x, y)
-void UI_moveCursor(int x, int y) {
-    COORD coord = {(SHORT)x, (SHORT)y};
-    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
-}
-
 // Set text color (0–15 for standard Windows colors)
 void UI_setTextColor(COLOR_t colorCode) {
     CONSOLE_SCREEN_BUFFER_INFO csbi;
@@ -136,11 +110,54 @@ void UI_setBackgroundColor(COLOR_t colorCode) {
     SetConsoleTextAttribute(hConsole, newAttr);
 }
 
+void UI_maximizeConsole() {
+    HWND consoleWindow = GetConsoleWindow();
+    ShowWindow(consoleWindow, SW_MAXIMIZE);
+    Sleep(500);
+}
+
+void UI_clearScreen() {
+    UI_setBackgroundColor(BLACK);
+    UI_setTextColor(RED);
+    system("cls");
+}
+
+void UI_getConsoleSize(int *columns, int *rows) {
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+    *columns = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+    *rows = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+}
+
+void UI_getCursorPosition(int *x, int *y) {
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+    *x = csbi.dwCursorPosition.X;
+    *y = csbi.dwCursorPosition.Y;
+}
+
+// Move cursor to (x, y)
+void UI_moveCursor(int x, int y) {
+    COORD coord = {(SHORT)x, (SHORT)y};
+    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
+}
 
 #else // Linux/macOS
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
+
+// Set text color (0–7 for standard ANSI colors)
+void UI_setTextColor(COLOR_t colorCode) {
+    printf("\033[%dm", 30 + (colorCode % 8));
+    fflush(stdout);
+}
+
+// Set background color (0–7 for standard ANSI colors)
+void UI_setBackgroundColor(COLOR_t colorCode) {
+    printf("\033[%dm", 40 + (colorCode % 8));
+    fflush(stdout);
+}
 
 void UI_maximizeConsole() {
     printf("\033[9;1t"); // Request maximize (xterm-compatible)
@@ -148,9 +165,9 @@ void UI_maximizeConsole() {
 }
 
 void UI_clearScreen() {
-    system("clear");
     UI_setBackgroundColor(BLACK);
     UI_setTextColor(RED);
+    system("clear");
 }
 
 void UI_getConsoleSize(int *columns, int *rows) {
@@ -202,20 +219,6 @@ void UI_moveCursor(int x, int y) {
     printf("\033[%d;%dH", y + 1, x + 1);
     fflush(stdout);
 }
-
-// Set text color (0–7 for standard ANSI colors)
-void UI_setTextColor(COLOR_t colorCode) {
-    printf("\033[%dm", 30 + (colorCode % 8));
-    fflush(stdout);
-}
-
-// Set background color (0–7 for standard ANSI colors)
-void UI_setBackgroundColor(COLOR_t colorCode) {
-    printf("\033[%dm", 40 + (colorCode % 8));
-    fflush(stdout);
-}
-
-
 
 #endif
 
@@ -285,8 +288,10 @@ void UI_choiceNavigation(int x, int y, CHOICE_STATE_t state) {
 
 }
 
-void UI_mainMenu(PROGRAM_STATE_t* programState){
+systemType_t UI_mainMenu(PROGRAM_STATE_t* programState){
     *programState = SERVER_MENU;
+    systemType_t type = SYS_SERVER;
+
 
     HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
 
@@ -346,6 +351,7 @@ void UI_mainMenu(PROGRAM_STATE_t* programState){
                     UI_setTextColor(RED);
                     UI_printString("Server", RED, BLACK);
                     *programState = CLIENT_MENU;
+                    type = SYS_CLIENT;
                 }else if(CLIENT_MENU == *programState){
                     UI_choiceNavigation(ChoiceBorderPivotX, ClientBorderPivotY, CLEAR);
                     UI_moveCursor(ChoiceTextPivotX, ClientTextPivotY);
@@ -355,6 +361,7 @@ void UI_mainMenu(PROGRAM_STATE_t* programState){
                     UI_moveCursor(ChoiceTextPivotX + 1, ServerTextPivotY);
                     UI_printString("Server", RED, WHITE);
                     *programState = SERVER_MENU;
+                    type = SYS_SERVER;
                 }
             }else if(VK_DOWN == virtualKeyCode && inputRecord.Event.KeyEvent.bKeyDown) {
                 if(SERVER_MENU == *programState){
@@ -366,6 +373,7 @@ void UI_mainMenu(PROGRAM_STATE_t* programState){
                     UI_setTextColor(RED);
                     UI_printString("Server", RED, BLACK);
                     *programState = CLIENT_MENU;
+                    type = SYS_CLIENT;
                 }else if(CLIENT_MENU == *programState){
                     UI_choiceNavigation(ChoiceBorderPivotX, ClientBorderPivotY, CLEAR);
                     UI_moveCursor(ChoiceTextPivotX, ClientTextPivotY);
@@ -374,16 +382,17 @@ void UI_mainMenu(PROGRAM_STATE_t* programState){
                     UI_choiceNavigation(ChoiceBorderPivotX, ServerBorderPivotY, SET);
                     UI_moveCursor(ChoiceTextPivotX + 1, ServerTextPivotY);
                     UI_printString("Server", RED, WHITE);
-                    *programState = SERVER_MENU;                    
+                    *programState = SERVER_MENU;
+                    type = SYS_SERVER;                    
                 }
             }else if(VK_RETURN == virtualKeyCode && inputRecord.Event.KeyEvent.bKeyDown){
                 UI_setTextColor(RED);
                 UI_setBackgroundColor(BLACK);
-                break;
+                initWinsock();
+                return type;
             }
         }
     }
-
 }
 
 void UI_serverMenu(PROGRAM_STATE_t* programState){    
@@ -415,17 +424,24 @@ void UI_serverMenu(PROGRAM_STATE_t* programState){
     UI_moveCursor(inputBorderPivotX + 12, inputBorderPivotY + 1);
     scanf("%s", serverUsername);
 
+    createServerSocket(&sockfd);
+
+    getServerIpPort(sockfd, serverIpAddress, sizeof(serverIpAddress), &port);
+    
+    itoa(port, serverPort, 10);
     // Get a free port and the device ip address and print them inplace of placeholders
     UI_moveCursor(inputBorderPivotX + 14, inputBorderPivotY + 3);
-    UI_printString("255.255.255.255", BLACK, WHITE);
+    UI_printString(serverIpAddress, BLACK, WHITE);
     UI_moveCursor(inputBorderPivotX + 8, inputBorderPivotY + 5);
-    UI_printString("8080", BLACK, WHITE);
-    
+    UI_printString(serverPort, BLACK, WHITE);
+
+    startListening(sockfd, 5);
     // Wait for connection from client
-    if(1){
-        *programState = CHAT_MENU;
+    if(acceptClient(sockfd, &sockfd, &out_client_addr, serverUsername, clientUsername, sizeof(clientUsername))){
+        *programState = SERVER_MENU;
     }else{
-       *programState = SERVER_MENU; 
+
+       *programState = CHAT_MENU; 
     }
 }
 
@@ -454,22 +470,23 @@ void UI_clientMenu(PROGRAM_STATE_t* programState){
     UI_printString("Port: ", RED, BLACK);
     UI_printString("                ", BLACK, WHITE);
     
+    createClientSocket(&sockfd);
     UI_moveCursor(inputBorderPivotX + 12, inputBorderPivotY + 1);
     scanf("%s", clientUsername);
     UI_moveCursor(inputBorderPivotX + 14, inputBorderPivotY + 3);
     scanf("%s", clientIpAddress);
     UI_moveCursor(inputBorderPivotX + 8, inputBorderPivotY + 5);
-    scanf("%s", clientPort);
+    scanf("%d", &clientPort);
 
     // try to connect to the server
-    if(1){
-        *programState = CHAT_MENU;
+    if(connectToServer(sockfd, clientIpAddress, clientPort, clientUsername, serverUsername, sizeof(serverUsername))){
+        *programState = CLIENT_MENU;
     }else{
-       *programState = CLIENT_MENU;
+       *programState = CHAT_MENU;
     }
 }
 
-void UI_chatMenu(PROGRAM_STATE_t* programState){
+void UI_chatMenu(PROGRAM_STATE_t* programState, systemType_t type){
     UI_clearScreen();
     UI_maximizeConsole();
     UI_getConsoleSize(&columns, &rows);
@@ -483,9 +500,18 @@ void UI_chatMenu(PROGRAM_STATE_t* programState){
 
     UI_moveCursor(1, rows - 2);
     printf("You are now talking as ");
-    UI_printString("Zorkano: ", YELLOW, BLACK);
 
+    UI_setTextColor(YELLOW);
+    UI_setBackgroundColor(BLACK);
+
+    if(type == SYS_SERVER){
+        printf("%s: ", serverUsername);
+    }
+    else if(type == SYS_CLIENT){
+        printf("%s: ", clientUsername);
+    }
     // while loop for the chat
     while(1){
+    
     };
 }

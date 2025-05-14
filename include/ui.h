@@ -36,14 +36,18 @@ typedef enum PROGRAM_STATE{
     CLIENT_MENU,
     CHAT_MENU,
 }PROGRAM_STATE_t;
+typedef enum {
+    SYS_CLIENT, 
+    SYS_SERVER
+}systemType_t;
 
-void UI_mainMenu(PROGRAM_STATE_t* programState);
+systemType_t UI_mainMenu(PROGRAM_STATE_t* programState);
 
 void UI_serverMenu(PROGRAM_STATE_t* programState);
 
 void UI_clientMenu(PROGRAM_STATE_t* programState);
 
-void UI_chatMenu(PROGRAM_STATE_t* programState);
+void UI_chatMenu(PROGRAM_STATE_t* programState, systemType_t type);
 
 
 
