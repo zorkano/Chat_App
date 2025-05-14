@@ -14,7 +14,8 @@
     typedef int socket_t;
 #endif
 
-
+void receive(SOCKET sock);
+void send_to(SOCKET sock);
 
 int initWinsock();
 
