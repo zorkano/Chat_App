@@ -1,12 +1,11 @@
 #include "common.h"
 #include "server.h"
 
-int server(char server_ip[100], int server_port){
+SOCKET server(char server_ip[100], int server_port){
     WSADATA wsa;
     SOCKET server_socket, client_socket;
     struct sockaddr_in server, client;
     int client_len;
-    char buffer[1024];
 
      // Initialize Winsock
     WSAStartup(MAKEWORD(2,2), &wsa);
@@ -22,9 +21,13 @@ int server(char server_ip[100], int server_port){
     bind(server_socket, (struct sockaddr *)&server, sizeof(server));
     listen(server_socket, 1);
     client_len = sizeof(struct sockaddr_in);
-    if (client_socket = accept(server_socket, (struct sockaddr *)&client, &client_len) < 0 )
-        return 1;
+    client_socket = accept(server_socket, (struct sockaddr *)&client, &client_len);
+    if (client_socket == INVALID_SOCKET ){
+        printf("Accept failed");
+        return INVALID_SOCKET;
+    }
+    else{
+        return client_socket ;
+    }
     
-    return 0 ;
-
 }
