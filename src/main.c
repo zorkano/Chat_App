@@ -5,14 +5,14 @@
 
 extern socket_t sockfd;
 
-systemType_t type;
+systemType_t programType;
 
 #ifdef _WIN32
     BOOL WINAPI consoleHandler(DWORD signal) {
-    if (signal == CTRL_CLOSE_EVENT || signal == CTRL_C_EVENT || signal == CTRL_BREAK_EVENT) {
-        close_socket(sockfd); // Your cleanup function
-        exit(0);
-    }
+        if (signal == CTRL_CLOSE_EVENT || signal == CTRL_C_EVENT || signal == CTRL_BREAK_EVENT) {
+            close_socket(sockfd); // Your cleanup function
+            exit(0);
+        }
         return TRUE;
     }
 #else
@@ -37,7 +37,7 @@ int main() {
     while (1) {
         switch(programState) {
             case MAIN_MENU:
-                type = UI_mainMenu(&programState);
+                programType = UI_mainMenu(&programState);
                 break;
             case SERVER_MENU:
                 UI_serverMenu(&programState);
@@ -46,13 +46,16 @@ int main() {
                 UI_clientMenu(&programState);
                 break;
             case CHAT_MENU:
-                UI_chatMenu(&programState, type);
+                if(programType == SYS_CLIENT){
+                    UI_chatClientMenu(&programState);
+                }else if(programType == SYS_SERVER){
+                    UI_chatServerMenu(&programState);
+                }
                 programState = MAIN_MENU;
                 break;
             default:
                 break;
         }
     }
-
     return 0;
 }
