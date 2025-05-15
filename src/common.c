@@ -56,4 +56,18 @@ void close_socket(int sockfd) {
 #endif
 }
 
+int dataSend(socket_t sockfd, char* buffer, int bufferLen){
+    if(send(sockfd, buffer, bufferLen, 0)){
+        return 1;
+    }else{
+        return 0;
+    }
+}
 
+int dataRecv(socket_t sockfd, char* buffer, int bufferLen){
+    if(recv(sockfd, buffer, bufferLen, 0)){
+        return 1;
+    }else{
+        return 0;
+    }
+}

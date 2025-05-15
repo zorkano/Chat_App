@@ -23,5 +23,8 @@ int getServerIpPort(socket_t sockfd, char* ipStr, size_t ipStrLen, int* outPort)
 
 void close_socket(int sockfd);
 
+int dataSend(socket_t sockfd, char* buffer, int bufferLen);
+
+int dataRecv(socket_t sockfd, char* buffer, int bufferLen);
 
 #endif /* COMMON_H */
