@@ -519,7 +519,6 @@ void UI_chatServerMenu(PROGRAM_STATE_t* programState){
 
     UI_moveCursor(1, inputCursorPositionY);
     printf("You are now talking as ");
-
     UI_printString(serverUsername, YELLOW, BLACK);
     printf(": ");
 
@@ -529,7 +528,8 @@ void UI_chatServerMenu(PROGRAM_STATE_t* programState){
         fflush(stdin);
         status = dataRecv(sockfd, buffer, sizeof(buffer));
         UI_moveCursor(cursorChatPostitionX, cursorChatPostitionY++);
-        printf("%s: ", clientUsername);
+        UI_printString(clientUsername, GREEN, BLACK);
+        printf(": ");
         UI_printString(buffer, WHITE, BLACK);
 
         UI_moveCursor(1, rows - 2);
@@ -560,7 +560,7 @@ void UI_chatServerMenu(PROGRAM_STATE_t* programState){
             printf("You are now talking as ");
             UI_printString(clientUsername, YELLOW, BLACK);
             printf(": ");
-
+            cursorChatPostitionY = 1;
         }
     };
 }
@@ -605,7 +605,8 @@ void UI_chatClientMenu(PROGRAM_STATE_t* programState){
         status = dataRecv(sockfd, buffer, sizeof(buffer));
 
         UI_moveCursor(cursorChatPostitionX, cursorChatPostitionY++);
-        printf("%s: ", serverUsername);
+        UI_printString(serverUsername, GREEN, BLACK);
+        printf(": ");
         UI_printString(buffer, WHITE, BLACK);
 
         if(cursorChatPostitionY >= (rows - 4)){
@@ -617,6 +618,7 @@ void UI_chatClientMenu(PROGRAM_STATE_t* programState){
             printf("You are now talking as ");
             UI_printString(clientUsername, YELLOW, BLACK);
             printf(": ");
+            cursorChatPostitionY = 1;
         }
     };
 }
