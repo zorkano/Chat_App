@@ -20,6 +20,12 @@ typedef enum CHOICE_STATE{
 }CHOICE_STATE_t;
 
 int columns, rows;
+int cursorChatPostitionX = 1;
+int cursorChatPostitionY = 1;
+
+char buffer[512] = {
+    "\0"
+};
 
 char clientUsername[15] = {
     "\0"
@@ -29,7 +35,9 @@ char clientIpAddress[17] = {
     "\0"
 };
 
-int clientPort;
+char clientPort[15] = {
+    "\0"
+};
 
 char serverUsername[15] = {
     "\0"
@@ -222,7 +230,16 @@ void UI_moveCursor(int x, int y) {
 
 #endif
 
-void UI_drawBorder(int columns, int rows) {
+int fgetsTrim(char *buffer, size_t size){
+    if (fgets(buffer, size, stdin) == NULL)
+        return 0; // Reading failed
+
+    // Remove trailing newline and carriage return characters
+    buffer[strcspn(buffer, "\r\n")] = '\0';
+    return 1; // Success
+}
+
+void UI_drawBorder(int columns, int rows){
     int startX, startY;
     UI_getCursorPosition(&startX, &startY);
     UI_setBackgroundColor(BLACK);
@@ -250,7 +267,7 @@ void UI_drawBorder(int columns, int rows) {
     fflush(stdout);
 }
 
-void UI_printAscii(int x, int y, char** s) {
+void UI_printAscii(int x, int y, char** s){
     int i;
     
     // Set text color for ASCII art
@@ -269,7 +286,7 @@ void UI_printString(char* string, COLOR_t textColor, COLOR_t backgroundColor){
     printf("%s", string);
 }
 
-void UI_choiceNavigation(int x, int y, CHOICE_STATE_t state) {
+void UI_choiceNavigation(int x, int y, CHOICE_STATE_t state){
     int i, j;
     // Set highlight color
     if(state){
@@ -422,7 +439,7 @@ void UI_serverMenu(PROGRAM_STATE_t* programState){
     UI_printString("                ", BLACK, WHITE);
 
     UI_moveCursor(inputBorderPivotX + 12, inputBorderPivotY + 1);
-    scanf("%s", serverUsername);
+    fgetsTrim(serverUsername, sizeof(serverUsername));
 
     createServerSocket(&sockfd);
 
@@ -472,46 +489,134 @@ void UI_clientMenu(PROGRAM_STATE_t* programState){
     
     createClientSocket(&sockfd);
     UI_moveCursor(inputBorderPivotX + 12, inputBorderPivotY + 1);
-    scanf("%s", clientUsername);
+    fgetsTrim(clientUsername, sizeof(clientUsername));
     UI_moveCursor(inputBorderPivotX + 14, inputBorderPivotY + 3);
-    scanf("%s", clientIpAddress);
+    fgetsTrim(clientIpAddress, sizeof(clientIpAddress));
     UI_moveCursor(inputBorderPivotX + 8, inputBorderPivotY + 5);
-    scanf("%d", &clientPort);
+    fgetsTrim(clientPort, sizeof(clientPort));
 
+    port = atoi(clientPort);
     // try to connect to the server
-    if(connectToServer(sockfd, clientIpAddress, clientPort, clientUsername, serverUsername, sizeof(serverUsername))){
+    if(connectToServer(sockfd, clientIpAddress, port, clientUsername, serverUsername, sizeof(serverUsername))){
         *programState = CLIENT_MENU;
     }else{
        *programState = CHAT_MENU;
     }
 }
 
-void UI_chatMenu(PROGRAM_STATE_t* programState, systemType_t type){
+void UI_chatServerMenu(PROGRAM_STATE_t* programState){
     UI_clearScreen();
     UI_maximizeConsole();
     UI_getConsoleSize(&columns, &rows);
-    int cursorChatPostitionX = 1;
-    int cursorChatPostitionY = 1;
+    int inputCursorPositionX = 25 + strlen(serverUsername);
+    int inputCursorPositionY = rows - 2;
+    int status;
 
     UI_drawBorder(columns, rows);
 
     UI_moveCursor(0, rows - 3);
     UI_drawBorder(columns, 3);
 
-    UI_moveCursor(1, rows - 2);
+    UI_moveCursor(1, inputCursorPositionY);
     printf("You are now talking as ");
 
-    UI_setTextColor(YELLOW);
-    UI_setBackgroundColor(BLACK);
+    UI_printString(serverUsername, YELLOW, BLACK);
+    printf(": ");
 
-    if(type == SYS_SERVER){
-        printf("%s: ", serverUsername);
-    }
-    else if(type == SYS_CLIENT){
-        printf("%s: ", clientUsername);
-    }
     // while loop for the chat
     while(1){
-    
+        memset(buffer, 0, sizeof(buffer));
+        fflush(stdin);
+        status = dataRecv(sockfd, buffer, sizeof(buffer));
+        UI_moveCursor(cursorChatPostitionX, cursorChatPostitionY++);
+        printf("%s: ", clientUsername);
+        UI_printString(buffer, WHITE, BLACK);
+
+        UI_moveCursor(1, rows - 2);
+        printf("You are now talking as ");
+        UI_printString(serverUsername, YELLOW, BLACK);
+        printf(": ");
+        
+        fflush(stdin);
+        
+        fgetsTrim(buffer, sizeof(buffer));
+        UI_moveCursor(inputCursorPositionX, inputCursorPositionY);
+        UI_printString("                                                                         ", WHITE, BLACK);
+        UI_moveCursor(cursorChatPostitionX, cursorChatPostitionY++);
+        UI_printString(serverUsername, YELLOW, BLACK);
+        printf(": ");
+        UI_printString(buffer, WHITE, BLACK);
+        UI_moveCursor(inputCursorPositionX, inputCursorPositionY);
+
+        status = dataSend(sockfd, buffer, strlen(buffer));
+
+        if(cursorChatPostitionY >= (rows - 5)){
+            UI_clearScreen();
+            UI_drawBorder(columns, rows);
+            UI_moveCursor(0, rows - 3);
+            UI_drawBorder(columns, 3);
+
+            UI_moveCursor(1, rows - 2);
+            printf("You are now talking as ");
+            UI_printString(clientUsername, YELLOW, BLACK);
+            printf(": ");
+
+        }
+    };
+}
+
+void UI_chatClientMenu(PROGRAM_STATE_t* programState){
+    int status;
+    UI_clearScreen();
+    UI_maximizeConsole();
+    UI_getConsoleSize(&columns, &rows);
+    int inputCursorPositionX = 25 + strlen(clientUsername);
+    int inputCursorPositionY = rows - 2;
+
+    UI_drawBorder(columns, rows);
+
+    UI_moveCursor(0, rows - 3);
+    UI_drawBorder(columns, 3);
+
+
+  
+    // while loop for the chat
+    while(1){
+        fflush(stdin);
+        UI_moveCursor(1, rows - 2);
+        printf("You are now talking as ");
+        UI_printString(clientUsername, YELLOW, BLACK);
+        printf(": ");
+        fgetsTrim(buffer, sizeof(buffer));
+        UI_moveCursor(inputCursorPositionX, inputCursorPositionY);
+        UI_printString("                                                                         ", WHITE, BLACK);
+        UI_moveCursor(cursorChatPostitionX, cursorChatPostitionY++);
+        UI_printString(clientUsername, YELLOW, BLACK);
+        printf(": ");
+        UI_printString(buffer, WHITE, BLACK);
+        UI_moveCursor(inputCursorPositionX, inputCursorPositionY);
+
+        status = dataSend(sockfd, buffer, strlen(buffer));
+
+
+
+        memset(buffer, 0, sizeof(buffer));
+        fflush(stdin);
+        status = dataRecv(sockfd, buffer, sizeof(buffer));
+
+        UI_moveCursor(cursorChatPostitionX, cursorChatPostitionY++);
+        printf("%s: ", serverUsername);
+        UI_printString(buffer, WHITE, BLACK);
+
+        if(cursorChatPostitionY >= (rows - 4)){
+            UI_clearScreen();
+            UI_drawBorder(columns, rows);
+            UI_moveCursor(0, rows - 3);
+            UI_drawBorder(columns, 3);
+            UI_moveCursor(1, rows - 2);
+            printf("You are now talking as ");
+            UI_printString(clientUsername, YELLOW, BLACK);
+            printf(": ");
+        }
     };
 }

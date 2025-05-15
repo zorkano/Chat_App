@@ -47,8 +47,8 @@ void UI_serverMenu(PROGRAM_STATE_t* programState);
 
 void UI_clientMenu(PROGRAM_STATE_t* programState);
 
-void UI_chatMenu(PROGRAM_STATE_t* programState, systemType_t type);
+void UI_chatClientMenu(PROGRAM_STATE_t* programState);
 
-
+void UI_chatServerMenu(PROGRAM_STATE_t* programState);
 
 #endif /* UI_H */ 
