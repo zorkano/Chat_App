@@ -8,7 +8,7 @@ CFLAGS = -Wall -g -I./include  # Assuming headers are in 'include' directory
 LDFLAGS = -lws2_32  # For Windows Sockets API
 
 # Output executable name
-TARGET = test
+TARGET = Program
 
 # Directories for source and headers
 SRC_DIR = src
