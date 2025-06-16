@@ -166,17 +166,17 @@ Name - Seif Aldeen Mahmoud Mostafa Ahmed
 
 Name - Ahmed Hassan Elsayed Hassanien
 
-[![email][email-shield]][hassan-email] [![linkedin][linkedin-shield]][zorkano-linkedin-url]
+[![email][email-shield]][hassan-email] [![linkedin][linkedin-shield]][hassan-linkedin-url]
 
 
 
 Name - Ahmed Mohamed Mosa'd Saleh 
 
-[![email][email-shield]][saleh-email] [![linkedin][linkedin-shield]][zorkano-linkedin-url]
+[![email][email-shield]][saleh-email] [![linkedin][linkedin-shield]][saleh-linkedin-url]
 
 
 
-Project Link: [https://github.com/zorkano/Chat_App](https://github.com/zorkano/Chat_App)
+Project Link: [link](https://github.com/zorkano/Chat_App)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -198,13 +198,14 @@ Project Link: [https://github.com/zorkano/Chat_App](https://github.com/zorkano/C
 [license-shield]: https://img.shields.io/github/license/zorkano/Chat_App.svg?style=for-the-badge
 [license-url]: https://github.com/zorkano/Chat_App/blob/master/LICENSE.txt
 [linkedin-shield]: https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white
-[zorkano-linkedin-url]: linkedin.com/in/seif-el-deen-mahmoud-89493424b
-[hassan-linkedin-url]: linkedin.com/in/ahmed-hassan-0529b0344/
-[saleh-linkedin-url]: linkedin.com/in/ahmed-saleh-73a3472a3
+[zorkano-linkedin-url]: https://linkedin.com/in/seif-el-deen-mahmoud-89493424b
+[hassan-linkedin-url]: https://linkedin.com/in/ahmed-hassan-0529b0344/
+[saleh-linkedin-url]: https://linkedin.com/in/ahmed-saleh-73a3472a3
 [email-shield]: https://img.shields.io/badge/Gmail-D14836?style=for-the-badge&logo=gmail&logoColor=white
-[zorkano-email]: seif.mahmoud.mostafa.273@gmail.com
-[hassan-email]: ahmedhassan32681ah@gmail.com
-[saleh-email]: ahmedmohomed41434143@gmail.com
+[zorkano-email]: mailto:seif.mahmoud.mostafa.273@gmail.com?subject=Subject&body=Body
+[hassan-email]: mailto:ahmedhassan32681ah@gmail.com?subject=Subject&body=Body
+[saleh-email]: mailto:ahmedmohomed41434143@gmail.com?subject=Subject&body=Body
+
 [Main-menu]: images/Main_menu.png
 [Server-menu]: images/Server_menu.png
 [Client-menu]: images/Client_menu.png
