@@ -202,10 +202,9 @@ Project Link: [link](https://github.com/zorkano/Chat_App)
 [hassan-linkedin-url]: https://linkedin.com/in/ahmed-hassan-0529b0344/
 [saleh-linkedin-url]: https://linkedin.com/in/ahmed-saleh-73a3472a3
 [email-shield]: https://img.shields.io/badge/Gmail-D14836?style=for-the-badge&logo=gmail&logoColor=white
-[zorkano-email]: mailto:seif.mahmoud.mostafa.273@gmail.com?subject=Subject&body=Body
-[hassan-email]: mailto:ahmedhassan32681ah@gmail.com?subject=Subject&body=Body
-[saleh-email]: mailto:ahmedmohomed41434143@gmail.com?subject=Subject&body=Body
-
+[zorkano-email]: mailto:seif.mahmoud.mostafa.273@gmail.com
+[hassan-email]: mailto:ahmedhassan32681ah@gmail.com
+[saleh-email]: mailto:ahmedmohomed41434143@gmail.com
 [Main-menu]: images/Main_menu.png
 [Server-menu]: images/Server_menu.png
 [Client-menu]: images/Client_menu.png
